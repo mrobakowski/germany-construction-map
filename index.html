@@ -1,0 +1,247 @@
+<html>
+    <head>
+        <title>Simple Map</title>
+        <meta name="viewport" content="initial-scale=1.0">
+        <meta charset="utf-8">
+        <style>
+            /* Always set the map height explicitly to define the size of the div
+            * element that contains the map. */
+            #map {
+                height: 100%;
+            }
+            /* Optional: Makes the sample page fill the window. */
+            html, body {
+                height: 100%;
+                margin: 0;
+                padding: 0;
+            }
+
+            #ui {
+                position: absolute;
+                top: 60px;
+                left: 10px;
+                padding: 10px;
+                background: white;
+                font-weight: bold;
+                font-family: Arial, Helvetica, sans-serif;
+            }
+
+            #granularity, #stat {
+                display: inline-grid;
+            }
+        </style>
+    </head>
+    <body>
+        <div id="map"></div>
+        <div id="ui">
+            <div id="granularity">
+                <!-- <div> -->
+                    <!-- <input type="radio" id="states" name="granularity" value="states"> -->
+                    <!-- <label for="states">States</label> -->
+                <!-- </div> -->
+                <div>
+                    <input type="radio" id="stat-regions" name="granularity" value="stat-regions" checked onclick="setRegions();">
+                    <label for="stat-regions">Statistical Regions</label>
+                </div>
+                <div>
+                    <input type="radio" id="kreise" name="granularity" value="kreise" onclick="setKreise();">
+                    <label for="kreise">Kreise</label>
+                </div>
+                <div>
+                    <input type="radio" id="heatmap" name="granularity" value="heatmap" disabled>
+                    <label for="heatmap"><s>Heatmap (WIP)</s></label>
+                </div>
+            </div>
+            <div id="stat">
+                <div>
+                    <input type="radio" id="businesses" name="stat" value="businesses" checked onclick="setCurrentField(0)">
+                    <label for="businesses">Businesses</label>
+                </div>
+                <div>
+                    <input type="radio" id="active-persons" name="stat" value="active-persons" onclick="setCurrentField(1)">
+                    <label for="active-persons">Active Persons</label>
+                </div>
+                <div>
+                    <input type="radio" id="total-sales" name="stat" value="total-sales" onclick="setCurrentField(2)">
+                    <label for="total-sales">Total Sales</label>
+                </div>
+                <div>
+                    <input type="radio" id="bulk-logistics" name="stat" value="bulk-logistics" onclick="setCurrentField(3)">
+                    <label for="bulk-logistics">Bulk Logistics</label>
+                </div>
+            </div>
+            <div>
+                <input type="number" id="limitMax" value="10000" onchange="setLimit()">
+                <label for="limitMax">Limit Max</label>
+            </div>
+            <div>
+                <input type="checkbox" id="showBorders" checked onclick="toggleShowBorders()">
+                <label for="showBorders">Show Borders</label>
+            </div>
+        </div>
+        <script src="https://code.jquery.com/jquery-3.3.1.min.js" integrity="sha256-FgpCb/KJQlLNfOu91ta32o/NMZxltwRo8QtmkMRdAu8=" crossorigin="anonymous"></script>
+        <script src="https://maps.googleapis.com/maps/api/js?key=AIzaSyBlOICFgobLxgR96U_-OQWO_U6nBIzJPUM"></script>
+        <script lang="text/javascript">
+           function getParameterByName(name, url) {
+                if (!url) url = window.location.href;
+                name = name.replace(/[\[\]]/g, '\\$&');
+                var regex = new RegExp('[?&]' + name + '(=([^&#]*)|&|#|$)'),
+                    results = regex.exec(url);
+                if (!results) return null;
+                if (!results[2]) return '';
+                return decodeURIComponent(results[2].replace(/\+/g, ' '));
+            }
+
+            const fields = ['businesses', 'active-persons', 'total-sales', 'bulk-logistics'];
+            limitMax = 10000;
+            limitMaxElem = document.querySelector('#limitMax');
+
+            async function main() {
+                kreiseGeoJson = await($.getJSON("./kreise.json"));
+                kreisePointGeoJson = await($.getJSON("./kreise-pts.json"));
+                statGeoJson = await($.getJSON("./stat-regions.json"));
+                var data = await($.getJSON("./data.json"));
+                let i = 0;
+
+                currentField = 0;
+
+                let noBerlin = getParameterByName('noBerlin');
+
+                kreiseData = data.filter(x => x.RS.length == 5);
+                statRegionsData = data.filter(x => x.RS.length == 3);
+                landsData = data.filter(x => x.RS.length == 2);
+
+                for (let land of landsData) {
+                    if (!statRegionsData.some(x => x.RS.startsWith(land.RS))) {
+                        statRegionsData.push(land);
+                    }
+                }
+
+                for (let land of landsData) {
+                    if (!kreiseData.some(x => x.RS.startsWith(land.RS))) {
+                        kreiseData.push(land);
+                    }
+                }
+
+                statGeoJson.features.forEach(f => {
+                    f.properties.data = statRegionsData.find(data => f.properties.STAT.startsWith(data.RS));
+                });
+
+                kreiseGeoJson.features.forEach(f => {
+                    f.properties.data = kreiseData.find(data => f.properties.RS.startsWith(data.RS));
+                });
+
+                kreisePointGeoJson.features.forEach(f => {
+                    f.properties.data = kreiseData.find(data => f.properties.RS.startsWith(data.RS));
+                });
+
+                maxVal = {
+                    kreis: {
+                        'businesses': -Infinity,
+                        'active-persons': -Infinity,
+                        'total-sales': -Infinity,
+                        'bulk-logistics': -Infinity
+                    }, 
+                    region: {
+                        'businesses': -Infinity,
+                        'active-persons': -Infinity,
+                        'total-sales': -Infinity,
+                        'bulk-logistics': -Infinity
+                    }
+                };
+
+                for (let kd of kreiseData) {
+                    for (let field of fields) {
+                        maxVal.kreis[field] = Math.max(maxVal.kreis[field], kd[field]);
+                    }
+                }
+
+                for (let r of statRegionsData) {
+                    for (let field of fields) {
+                        maxVal.region[field] = Math.max(maxVal.region[field], r[field]);
+                    }
+                }
+
+                var germanyCoords = new google.maps.LatLng(50.75, 10.55);
+                
+                var mapOptions = {
+                    zoom: 6,
+                    center: germanyCoords
+                };
+
+                map = new google.maps.Map(document.getElementById("map"), mapOptions);
+
+                setRegions();
+
+                map.data.addListener('mouseover', showTooltip);
+                map.data.addListener('mouseout', hideTooltip);
+            }
+
+            function showTooltip(event) {
+                let data = event.feature.getProperty('data');
+                let titleText = data.land + data['stat-region'] + data.kreis + ', ' + fields[currentField] + ': ' + data[fields[currentField]];
+
+                if (titleText) {
+                    console.log(titleText);
+                    map.getDiv().setAttribute('title', titleText);
+                }
+            }
+
+            function hideTooltip(mouseEvent) {
+                map.getDiv().removeAttribute('title');
+            }
+
+            function reset() {
+                if (!map) return;
+                map.data.forEach(f => map.data.remove(f));
+            }
+
+            function setKreise() {
+                if (!map) return;
+                reset();
+                currentGranularity = 'kreis'
+                map.data.addGeoJson(kreiseGeoJson);
+                map.data.setStyle(stylingFunc);
+            }
+
+            function setRegions() {
+                if (!map) return;
+                reset();
+                currentGranularity = 'region'
+                map.data.addGeoJson(statGeoJson);
+                map.data.setStyle(stylingFunc);
+            }
+
+            function setLimit() {
+                limitMax = +limitMaxElem.value;
+                map.data.setStyle(stylingFunc);
+            }
+
+            showBorders = true;
+            function toggleShowBorders() {
+                showBorders = !showBorders;
+                map.data.setStyle(stylingFunc);
+            }
+
+            function stylingFunc(feature) {
+                let field = fields[currentField]
+                let x = Math.min(feature.getProperty('data')[field], limitMax);
+                let max = Math.min(maxVal[currentGranularity][field], limitMax);
+                let percentMax = (x / max) * 100;
+
+                console.log(feature.getProperty('data'), 100-percentMax);
+                return {
+                    fillColor: 'hsl('+(100 - percentMax)+', 100%, 50%)',
+                    strokeWeight: showBorders?1:0
+                }
+            }
+
+            function setCurrentField(cf) {
+                currentField = cf;
+                map.data.setStyle(stylingFunc);
+            }
+
+            main();
+        </script>
+    </body>
+</html>
