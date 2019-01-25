@@ -1,247 +1,377 @@
 <html>
-    <head>
-        <title>Simple Map</title>
-        <meta name="viewport" content="initial-scale=1.0">
-        <meta charset="utf-8">
-        <style>
-            /* Always set the map height explicitly to define the size of the div
-            * element that contains the map. */
-            #map {
-                height: 100%;
-            }
-            /* Optional: Makes the sample page fill the window. */
-            html, body {
-                height: 100%;
-                margin: 0;
-                padding: 0;
-            }
+<head>
+    <title>Simple Map</title>
+    <meta name="viewport" content="initial-scale=1.0">
+    <meta charset="utf-8">
+    <style>
+        /* Always set the map height explicitly to define the size of the div
+        * element that contains the map. */
+        #map {
+            height: 100%;
+        }
 
-            #ui {
-                position: absolute;
-                top: 60px;
-                left: 10px;
-                padding: 10px;
-                background: white;
-                font-weight: bold;
-                font-family: Arial, Helvetica, sans-serif;
-            }
+        /* Optional: Makes the sample page fill the window. */
+        html, body {
+            height: 100%;
+            margin: 0;
+            padding: 0;
+        }
 
-            #granularity, #stat {
-                display: inline-grid;
-            }
-        </style>
-    </head>
-    <body>
-        <div id="map"></div>
-        <div id="ui">
-            <div id="granularity">
-                <!-- <div> -->
-                    <!-- <input type="radio" id="states" name="granularity" value="states"> -->
-                    <!-- <label for="states">States</label> -->
-                <!-- </div> -->
-                <div>
-                    <input type="radio" id="stat-regions" name="granularity" value="stat-regions" checked onclick="setRegions();">
-                    <label for="stat-regions">Statistical Regions</label>
-                </div>
-                <div>
-                    <input type="radio" id="kreise" name="granularity" value="kreise" onclick="setKreise();">
-                    <label for="kreise">Kreise</label>
-                </div>
-                <div>
-                    <input type="radio" id="heatmap" name="granularity" value="heatmap" disabled>
-                    <label for="heatmap"><s>Heatmap (WIP)</s></label>
-                </div>
-            </div>
-            <div id="stat">
-                <div>
-                    <input type="radio" id="businesses" name="stat" value="businesses" checked onclick="setCurrentField(0)">
-                    <label for="businesses">Businesses</label>
-                </div>
-                <div>
-                    <input type="radio" id="active-persons" name="stat" value="active-persons" onclick="setCurrentField(1)">
-                    <label for="active-persons">Active Persons</label>
-                </div>
-                <div>
-                    <input type="radio" id="total-sales" name="stat" value="total-sales" onclick="setCurrentField(2)">
-                    <label for="total-sales">Total Sales</label>
-                </div>
-                <div>
-                    <input type="radio" id="bulk-logistics" name="stat" value="bulk-logistics" onclick="setCurrentField(3)">
-                    <label for="bulk-logistics">Bulk Logistics</label>
-                </div>
-            </div>
-            <div>
-                <input type="number" id="limitMax" value="10000" onchange="setLimit()">
-                <label for="limitMax">Limit Max</label>
-            </div>
-            <div>
-                <input type="checkbox" id="showBorders" checked onclick="toggleShowBorders()">
-                <label for="showBorders">Show Borders</label>
-            </div>
+        #ui {
+            position: absolute;
+            top: 60px;
+            left: 10px;
+            padding: 10px;
+            background: white;
+            font-weight: bold;
+            font-family: Arial, Helvetica, sans-serif;
+        }
+
+        #granularity, #stat {
+            display: inline-grid;
+        }
+
+        #legend {
+            position: fixed;
+            top: 100px;
+            right: 100px;
+            width: 20px;
+            height: 300px;
+            border: 1px solid black;
+            background-image: linear-gradient(
+                    hsla(00, 100%, 80%, 1.0),
+                    hsla(10, 100%, 80%, 1.0),
+                    hsla(20, 100%, 80%, 1.0),
+                    hsla(30, 100%, 80%, 1.0),
+                    hsla(40, 100%, 80%, 1.0),
+                    hsla(50, 100%, 80%, 1.0),
+                    hsla(60, 100%, 80%, 1.0),
+                    hsla(70, 100%, 80%, 1.0),
+                    hsla(80, 100%, 80%, 1.0),
+                    hsla(90, 100%, 80%, 1.0),
+                    hsla(100, 100%, 80%, 1.0)
+            );
+        }
+
+        #legend-max {
+            position: relative;
+            left: 30px;
+            top: -10px;
+            background: white;
+            font-family: Arial, Helvetica, sans-serif;
+            white-space: nowrap;
+            border: 1px solid black;
+            padding: 3px;
+        }
+
+        #legend-min {
+            position: relative;
+            left: 30px;
+            top: 270px;
+            background: white;
+            font-family: Arial, Helvetica, sans-serif;
+            white-space: nowrap;
+            border: 1px solid black;
+            padding: 3px;
+        }
+    </style>
+</head>
+<body>
+<div id="map"></div>
+<div id="legend">
+    <span id="legend-max">Max</span>
+    <span id="legend-min">0</span>
+</div>
+<div id="ui">
+    <div id="granularity">
+        <!-- <div> -->
+        <!-- <input type="radio" id="states" name="granularity" value="states"> -->
+        <!-- <label for="states">States</label> -->
+        <!-- </div> -->
+        <div>
+            <input type="radio" id="stat-regions" name="granularity" value="stat-regions" checked
+                   onclick="setRegions();">
+            <label for="stat-regions">Statistical Regions</label>
         </div>
-        <script src="https://code.jquery.com/jquery-3.3.1.min.js" integrity="sha256-FgpCb/KJQlLNfOu91ta32o/NMZxltwRo8QtmkMRdAu8=" crossorigin="anonymous"></script>
-        <script src="https://maps.googleapis.com/maps/api/js?key=AIzaSyBlOICFgobLxgR96U_-OQWO_U6nBIzJPUM"></script>
-        <script lang="text/javascript">
-           function getParameterByName(name, url) {
-                if (!url) url = window.location.href;
-                name = name.replace(/[\[\]]/g, '\\$&');
-                var regex = new RegExp('[?&]' + name + '(=([^&#]*)|&|#|$)'),
-                    results = regex.exec(url);
-                if (!results) return null;
-                if (!results[2]) return '';
-                return decodeURIComponent(results[2].replace(/\+/g, ' '));
+        <div>
+            <input type="radio" id="stat-regions-united-saxony" name="granularity" value="heatmap" onclick="setRegionsSaxony();">
+            <label for="stat-regions-united-saxony">Statistical Regions (Saxony as one region)</label>
+        </div>
+        <div>
+            <input type="radio" id="kreise" name="granularity" value="kreise" onclick="setKreise();">
+            <label for="kreise">Kreise</label>
+        </div>
+    </div>
+    <div id="stat">
+        <div>
+            <input type="radio" id="businesses" name="stat" value="businesses" checked onclick="setCurrentField(0)">
+            <label for="businesses">Businesses</label>
+        </div>
+        <div>
+            <input type="radio" id="active-persons" name="stat" value="active-persons" onclick="setCurrentField(1)">
+            <label for="active-persons">Active Persons</label>
+        </div>
+        <div>
+            <input type="radio" id="total-sales" name="stat" value="total-sales" onclick="setCurrentField(2)">
+            <label for="total-sales">Total Sales</label>
+        </div>
+        <div>
+            <input type="radio" id="bulk-logistics" name="stat" value="bulk-logistics" onclick="setCurrentField(3)">
+            <label for="bulk-logistics">Bulk Logistics</label>
+        </div>
+    </div>
+    <div>
+        <input type="number" id="limitMax" value="10000" onchange="setLimit()">
+        <label for="limitMax">Limit Max</label>
+    </div>
+    <div>
+        <input type="checkbox" id="showBorders" checked onclick="toggleShowBorders()">
+        <label for="showBorders">Show Borders</label>
+    </div>
+</div>
+<script src="https://code.jquery.com/jquery-3.3.1.min.js"
+        integrity="sha256-FgpCb/KJQlLNfOu91ta32o/NMZxltwRo8QtmkMRdAu8=" crossorigin="anonymous"></script>
+<script src="https://maps.googleapis.com/maps/api/js?key=AIzaSyBlOICFgobLxgR96U_-OQWO_U6nBIzJPUM"></script>
+<script lang="text/javascript">
+    function getParameterByName(name, url) {
+        if (!url) url = window.location.href;
+        name = name.replace(/[\[\]]/g, '\\$&');
+        var regex = new RegExp('[?&]' + name + '(=([^&#]*)|&|#|$)'),
+            results = regex.exec(url);
+        if (!results) return null;
+        if (!results[2]) return '';
+        return decodeURIComponent(results[2].replace(/\+/g, ' '));
+    }
+
+    const fields = ['businesses', 'active-persons', 'total-sales', 'bulk-logistics'];
+    limitMax = 10000;
+    limitMaxElem = document.querySelector('#limitMax');
+
+    function dragElement(elmnt) {
+        var pos1 = 0, pos2 = 0, pos3 = 0, pos4 = 0;
+        if (document.getElementById(elmnt.id + "header")) {
+            // if present, the header is where you move the DIV from:
+            document.getElementById(elmnt.id + "header").onmousedown = dragMouseDown;
+        } else {
+            // otherwise, move the DIV from anywhere inside the DIV:
+            elmnt.onmousedown = dragMouseDown;
+        }
+
+        function dragMouseDown(e) {
+            e = e || window.event;
+            e.preventDefault();
+            // get the mouse cursor position at startup:
+            pos3 = e.clientX;
+            pos4 = e.clientY;
+            document.onmouseup = closeDragElement;
+            // call a function whenever the cursor moves:
+            document.onmousemove = elementDrag;
+        }
+
+        function elementDrag(e) {
+            e = e || window.event;
+            e.preventDefault();
+            // calculate the new cursor position:
+            pos1 = pos3 - e.clientX;
+            pos2 = pos4 - e.clientY;
+            pos3 = e.clientX;
+            pos4 = e.clientY;
+            // set the element's new position:
+            elmnt.style.top = (elmnt.offsetTop - pos2) + "px";
+            elmnt.style.left = (elmnt.offsetLeft - pos1) + "px";
+        }
+
+        function closeDragElement() {
+            // stop moving when mouse button is released:
+            document.onmouseup = null;
+            document.onmousemove = null;
+        }
+    }
+
+    dragElement(document.querySelector("#legend"));
+
+
+    async function main() {
+        kreiseGeoJson = await ($.getJSON("./kreise.json"));
+        kreisePointGeoJson = await ($.getJSON("./kreise-pts.json"));
+        statGeoJson = await ($.getJSON("./stat-regions.json"));
+        statSaxGeoJson = await ($.getJSON("./stat-regions-saxony.json"));
+        var data = await ($.getJSON("./data.json"));
+        let i = 0;
+
+        currentField = 0;
+
+        let noBerlin = getParameterByName('noBerlin');
+
+        kreiseData = data.filter(x => x.RS.length == 5);
+        statRegionsData = data.filter(x => x.RS.length == 3);
+        landsData = data.filter(x => x.RS.length == 2);
+
+        for (let land of landsData) {
+            if (!statRegionsData.some(x => x.RS.startsWith(land.RS))) {
+                statRegionsData.push(land);
             }
+        }
 
-            const fields = ['businesses', 'active-persons', 'total-sales', 'bulk-logistics'];
-            limitMax = 10000;
-            limitMaxElem = document.querySelector('#limitMax');
-
-            async function main() {
-                kreiseGeoJson = await($.getJSON("./kreise.json"));
-                kreisePointGeoJson = await($.getJSON("./kreise-pts.json"));
-                statGeoJson = await($.getJSON("./stat-regions.json"));
-                var data = await($.getJSON("./data.json"));
-                let i = 0;
-
-                currentField = 0;
-
-                let noBerlin = getParameterByName('noBerlin');
-
-                kreiseData = data.filter(x => x.RS.length == 5);
-                statRegionsData = data.filter(x => x.RS.length == 3);
-                landsData = data.filter(x => x.RS.length == 2);
-
-                for (let land of landsData) {
-                    if (!statRegionsData.some(x => x.RS.startsWith(land.RS))) {
-                        statRegionsData.push(land);
-                    }
-                }
-
-                for (let land of landsData) {
-                    if (!kreiseData.some(x => x.RS.startsWith(land.RS))) {
-                        kreiseData.push(land);
-                    }
-                }
-
-                statGeoJson.features.forEach(f => {
-                    f.properties.data = statRegionsData.find(data => f.properties.STAT.startsWith(data.RS));
-                });
-
-                kreiseGeoJson.features.forEach(f => {
-                    f.properties.data = kreiseData.find(data => f.properties.RS.startsWith(data.RS));
-                });
-
-                kreisePointGeoJson.features.forEach(f => {
-                    f.properties.data = kreiseData.find(data => f.properties.RS.startsWith(data.RS));
-                });
-
-                maxVal = {
-                    kreis: {
-                        'businesses': -Infinity,
-                        'active-persons': -Infinity,
-                        'total-sales': -Infinity,
-                        'bulk-logistics': -Infinity
-                    }, 
-                    region: {
-                        'businesses': -Infinity,
-                        'active-persons': -Infinity,
-                        'total-sales': -Infinity,
-                        'bulk-logistics': -Infinity
-                    }
-                };
-
-                for (let kd of kreiseData) {
-                    for (let field of fields) {
-                        maxVal.kreis[field] = Math.max(maxVal.kreis[field], kd[field]);
-                    }
-                }
-
-                for (let r of statRegionsData) {
-                    for (let field of fields) {
-                        maxVal.region[field] = Math.max(maxVal.region[field], r[field]);
-                    }
-                }
-
-                var germanyCoords = new google.maps.LatLng(50.75, 10.55);
-                
-                var mapOptions = {
-                    zoom: 6,
-                    center: germanyCoords
-                };
-
-                map = new google.maps.Map(document.getElementById("map"), mapOptions);
-
-                setRegions();
-
-                map.data.addListener('mouseover', showTooltip);
-                map.data.addListener('mouseout', hideTooltip);
+        for (let land of landsData) {
+            if (!kreiseData.some(x => x.RS.startsWith(land.RS))) {
+                kreiseData.push(land);
             }
+        }
 
-            function showTooltip(event) {
-                let data = event.feature.getProperty('data');
-                let titleText = data.land + data['stat-region'] + data.kreis + ', ' + fields[currentField] + ': ' + data[fields[currentField]];
+        statGeoJson.features.forEach(f => {
+            f.properties.data = statRegionsData.find(data => f.properties.STAT.startsWith(data.RS));
+        });
 
-                if (titleText) {
-                    console.log(titleText);
-                    map.getDiv().setAttribute('title', titleText);
-                }
+        kreiseGeoJson.features.forEach(f => {
+            f.properties.data = kreiseData.find(data => f.properties.RS.startsWith(data.RS));
+        });
+
+        kreisePointGeoJson.features.forEach(f => {
+            f.properties.data = kreiseData.find(data => f.properties.RS.startsWith(data.RS));
+        });
+
+        statSaxGeoJson.features.forEach(f => {
+            f.properties.data = statRegionsData.find(data => f.properties.STAT.startsWith(data.RS));
+            if (!f.properties.data)
+                f.properties.data = landsData.find(data => data.RS == "14")
+        });
+
+        maxVal = {
+            kreis: {
+                'businesses': -Infinity,
+                'active-persons': -Infinity,
+                'total-sales': -Infinity,
+                'bulk-logistics': -Infinity
+            },
+            region: {
+                'businesses': -Infinity,
+                'active-persons': -Infinity,
+                'total-sales': -Infinity,
+                'bulk-logistics': -Infinity
+            },
+            'region-saxony': {
+                'businesses': -Infinity,
+                'active-persons': -Infinity,
+                'total-sales': -Infinity,
+                'bulk-logistics': -Infinity
             }
+        };
 
-            function hideTooltip(mouseEvent) {
-                map.getDiv().removeAttribute('title');
+        for (let kd of kreiseData) {
+            for (let field of fields) {
+                maxVal.kreis[field] = Math.max(maxVal.kreis[field], kd[field]);
             }
+        }
 
-            function reset() {
-                if (!map) return;
-                map.data.forEach(f => map.data.remove(f));
+        for (let r of statRegionsData) {
+            for (let field of fields) {
+                maxVal.region[field] = Math.max(maxVal.region[field], r[field]);
+                maxVal['region-saxony'][field] = Math.max(maxVal['region-saxony'][field], r[field]);
             }
+        }
 
-            function setKreise() {
-                if (!map) return;
-                reset();
-                currentGranularity = 'kreis'
-                map.data.addGeoJson(kreiseGeoJson);
-                map.data.setStyle(stylingFunc);
-            }
+        let saxonyData = statSaxGeoJson.features.find(x => x.properties.STAT == "140").properties.data;
+        for (let field of fields) {
+            maxVal['region-saxony'][field] = Math.max(maxVal['region-saxony'][field], saxonyData[field]);
+        }
 
-            function setRegions() {
-                if (!map) return;
-                reset();
-                currentGranularity = 'region'
-                map.data.addGeoJson(statGeoJson);
-                map.data.setStyle(stylingFunc);
-            }
+        var germanyCoords = new google.maps.LatLng(50.75, 10.55);
 
-            function setLimit() {
-                limitMax = +limitMaxElem.value;
-                map.data.setStyle(stylingFunc);
-            }
+        var mapOptions = {
+            zoom: 6,
+            center: germanyCoords
+        };
 
-            showBorders = true;
-            function toggleShowBorders() {
-                showBorders = !showBorders;
-                map.data.setStyle(stylingFunc);
-            }
+        map = new google.maps.Map(document.getElementById("map"), mapOptions);
 
-            function stylingFunc(feature) {
-                let field = fields[currentField]
-                let x = Math.min(feature.getProperty('data')[field], limitMax);
-                let max = Math.min(maxVal[currentGranularity][field], limitMax);
-                let percentMax = (x / max) * 100;
+        setRegions();
 
-                console.log(feature.getProperty('data'), 100-percentMax);
-                return {
-                    fillColor: 'hsl('+(100 - percentMax)+', 100%, 50%)',
-                    strokeWeight: showBorders?1:0
-                }
-            }
+        map.data.addListener('mouseover', showTooltip);
+        map.data.addListener('mouseout', hideTooltip);
+    }
 
-            function setCurrentField(cf) {
-                currentField = cf;
-                map.data.setStyle(stylingFunc);
-            }
+    function showTooltip(event) {
+        let data = event.feature.getProperty('data');
+        let titleText = data.land + data['stat-region'] + data.kreis + ', ' + fields[currentField] + ': ' + data[fields[currentField]];
 
-            main();
-        </script>
-    </body>
+        if (titleText) {
+            console.log(titleText);
+            map.getDiv().setAttribute('title', titleText);
+        }
+    }
+
+    function hideTooltip(mouseEvent) {
+        map.getDiv().removeAttribute('title');
+    }
+
+    function reset() {
+        if (!map) return;
+        map.data.forEach(f => map.data.remove(f));
+    }
+
+    function restyle() {
+        let realMax = maxVal[currentGranularity][fields[currentField]];
+        let max = Math.min(realMax, limitMax);
+        document.querySelector("#legend-max").innerHTML = max + " (max: " + realMax + ")";
+        map.data.setStyle(stylingFunc);
+    }
+
+    function setKreise() {
+        if (!map) return;
+        reset();
+        currentGranularity = 'kreis';
+        map.data.addGeoJson(kreiseGeoJson);
+        restyle();
+    }
+
+    function setRegions() {
+        if (!map) return;
+        reset();
+        currentGranularity = 'region';
+        map.data.addGeoJson(statGeoJson);
+        restyle();
+    }
+
+    function setRegionsSaxony() {
+        if (!map) return;
+        reset();
+        currentGranularity = 'region-saxony';
+        map.data.addGeoJson(statSaxGeoJson);
+        restyle();
+    }
+
+    function setLimit() {
+        limitMax = +limitMaxElem.value;
+        restyle();
+    }
+
+    showBorders = true;
+
+    function toggleShowBorders() {
+        showBorders = !showBorders;
+        restyle();
+    }
+
+    function stylingFunc(feature) {
+        let field = fields[currentField];
+        let x = Math.min(feature.getProperty('data')[field], limitMax);
+        let max = Math.min(maxVal[currentGranularity][field], limitMax);
+        let percentMax = (x / max) * 100;
+
+        console.log(feature.getProperty('data'), 100 - percentMax);
+        return {
+            fillColor: 'hsl(' + (100 - percentMax) + ', 100%, 50%)',
+            strokeWeight: showBorders ? 1 : 0
+        }
+    }
+
+    function setCurrentField(cf) {
+        currentField = cf;
+        restyle();
+    }
+
+    main();
+</script>
+</body>
 </html>
