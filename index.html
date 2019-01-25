@@ -49,7 +49,25 @@
                     hsla(70, 100%, 80%, 1.0),
                     hsla(80, 100%, 80%, 1.0),
                     hsla(90, 100%, 80%, 1.0),
-                    hsla(100, 100%, 80%, 1.0)
+                    hsla(100, 100%, 80%, 1.0),
+                    hsla(120, 100%, 80%, 1.0),
+                    hsla(130, 100%, 80%, 1.0),
+                    hsla(140, 100%, 80%, 1.0),
+                    hsla(150, 100%, 80%, 1.0),
+                    hsla(160, 100%, 80%, 1.0),
+                    hsla(170, 100%, 80%, 1.0),
+                    hsla(180, 100%, 80%, 1.0),
+                    hsla(190, 100%, 80%, 1.0),
+                    hsla(200, 100%, 80%, 1.0),
+                    hsla(210, 100%, 80%, 1.0),
+                    hsla(220, 100%, 80%, 1.0),
+                    hsla(230, 100%, 80%, 1.0),
+                    hsla(240, 100%, 80%, 1.0)
+                    /*hsla(260, 100%, 80%, 1.0),*/
+                    /*hsla(270, 100%, 80%, 1.0),*/
+                    /*hsla(280, 100%, 80%, 1.0),*/
+                    /*hsla(290, 100%, 80%, 1.0),*/
+                    /*hsla(300, 100%, 80%, 1.0)*/
             );
         }
 
@@ -357,11 +375,11 @@
         let field = fields[currentField];
         let x = Math.min(feature.getProperty('data')[field], limitMax);
         let max = Math.min(maxVal[currentGranularity][field], limitMax);
-        let percentMax = (x / max) * 100;
+        let percentMax = (x / max) * 240;
 
-        console.log(feature.getProperty('data'), 100 - percentMax);
+        console.log(feature.getProperty('data'), 240 - percentMax);
         return {
-            fillColor: 'hsl(' + (100 - percentMax) + ', 100%, 50%)',
+            fillColor: 'hsl(' + (240 - percentMax) + ', 100%, 50%)',
             strokeWeight: showBorders ? 1 : 0
         }
     }
